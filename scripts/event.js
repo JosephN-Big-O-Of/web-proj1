@@ -372,14 +372,13 @@ function showError(message) {
 // COMMENTS SECTION
 // ============================================
 
+// COMMENTS SECTION
 async function loadComments() {
   const container = document.getElementById("comments-container");
-  if (!container) return; // Exit if comments section doesn't exist yet
+  if (!container) return;
 
   try {
-    const response = await fetch(
-      `/web-proj/api/comments.php?event_id=${eventId}`
-    );
+    const response = await fetch(`api/comments.php?event_id=${eventId}`);
     const data = await response.json();
 
     if (data.success) {
@@ -389,55 +388,8 @@ async function loadComments() {
     }
   } catch (error) {
     console.error("Failed to load comments:", error);
-    container.innerHTML = "<p>Failed to load comments. </p>";
+    container.innerHTML = "<p>Failed to load comments.</p>";
   }
-}
-
-function renderComments(comments) {
-  const container = document.getElementById("comments-container");
-
-  if (comments.length === 0) {
-    container.innerHTML =
-      '<p style="color: #999;">No comments yet.  Be the first to comment!</p>';
-    return;
-  }
-
-  container.innerHTML = "";
-
-  comments.forEach((comment) => {
-    const card = document.createElement("div");
-    card.className = "comment-card";
-
-    const date = new Date(comment.created_at).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    const canDelete =
-      currentUser &&
-      (currentUser.id == comment.user_id ||
-        ["admin", "owner"].includes(currentUser.role));
-
-    card.innerHTML = `
-            <div class="comment-header">
-                <span class="comment-author">${escapeHtml(
-                  comment.user_name
-                )}</span>
-                <span class="comment-date">${date}</span>
-            </div>
-            <p class="comment-text">${escapeHtml(comment.comment)}</p>
-            ${
-              canDelete
-                ? `<button class="comment-delete" onclick="deleteComment(${comment.id})">Delete</button>`
-                : ""
-            }
-        `;
-
-    container.appendChild(card);
-  });
 }
 
 async function submitComment(e) {
@@ -445,7 +397,6 @@ async function submitComment(e) {
 
   const input = document.getElementById("comment-input");
   const comment = input.value.trim();
-
   if (!comment) return;
 
   try {
@@ -455,7 +406,7 @@ async function submitComment(e) {
       return;
     }
 
-    const response = await fetch("/web-proj/api/comments.php", {
+    const response = await fetch("api/comments.php", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -463,22 +414,21 @@ async function submitComment(e) {
       },
       body: JSON.stringify({
         event_id: eventId,
-        comment: comment,
+        comment,
       }),
     });
 
     const data = await response.json();
-
     if (data.success) {
       input.value = "";
       document.getElementById("char-count").textContent = "0/1000";
-      loadComments(); // Reload comments
+      loadComments();
     } else {
       alert("Failed to post comment: " + (data.error || "Unknown error"));
     }
   } catch (error) {
     console.error("Failed to post comment:", error);
-    alert("Failed to post comment.  Please try again.");
+    alert("Failed to post comment. Please try again.");
   }
 }
 
@@ -487,18 +437,14 @@ window.deleteComment = async function (commentId) {
 
   try {
     const firebaseUser = auth.currentUser;
-    const response = await fetch(
-      `/web-proj/api/comments.php?comment_id=${commentId}`,
-      {
-        method: "DELETE",
-        headers: { "X-Firebase-UID": firebaseUser.uid },
-      }
-    );
+    const response = await fetch(`api/comments.php?comment_id=${commentId}`, {
+      method: "DELETE",
+      headers: { "X-Firebase-UID": firebaseUser.uid },
+    });
 
     const data = await response.json();
-
     if (data.success) {
-      loadComments(); // Reload comments
+      loadComments();
     } else {
       alert("Failed to delete comment: " + (data.error || "Unknown error"));
     }
@@ -507,6 +453,20 @@ window.deleteComment = async function (commentId) {
     alert("Failed to delete comment. Please try again.");
   }
 };
+
+// Show comment form when logged in (ensure this exists in your init/auth flow)
+function updateCommentFormVisibility() {
+  const container = document.getElementById("comment-form-container");
+  if (!container) return;
+  const firebaseUser = auth.currentUser;
+  container.style.display = firebaseUser ? "block" : "none";
+}
+
+// Example: call these in your page init after eventId is set and auth is ready
+// onAuthStateChanged(auth, () => {
+//   updateCommentFormVisibility();
+//   loadComments();
+// });
 
 function escapeHtml(text) {
   const div = document.createElement("div");
