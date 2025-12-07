@@ -81,6 +81,11 @@ try {
         $where[] = "e.date <= :date_to";
         $params[':date_to'] = $_GET['date_to'];
     }
+    
+    if (! empty($_GET['location'])) {
+    $where[] = "e.location LIKE :location";
+    $params[':location'] = '%' . $_GET['location'] . '%';
+}
 
     if (isset($_GET['price_min'])) {
         $where[] = "e.price >= :price_min";

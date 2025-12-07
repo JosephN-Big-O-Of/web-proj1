@@ -84,7 +84,9 @@ async function loadFavorites() {
 
     if (data.success) {
       favorites = data.favorites;
-      document.getElementById("favorites-subtitle").textContent = `You have ${favorites.length} saved event${favorites.length !== 1 ? "s" : ""}`;
+      document.getElementById("favorites-subtitle").textContent = `You have ${
+        favorites.length
+      } saved event${favorites.length !== 1 ? "s" : ""}`;
       renderFavorites();
     } else {
       throw new Error(data.error || "Failed to load favorites");
@@ -123,34 +125,52 @@ function renderFavorites() {
     card.className = "favorite-card";
 
     const imageUrl =
-      event.image_url && typeof event.image_url === "string" && event.image_url.trim()
+      event.image_url &&
+      typeof event.image_url === "string" &&
+      event.image_url.trim()
         ? event.image_url
         : "https://via.placeholder.com/400x200?text=Event";
-    const price = event.price > 0 ? `$${parseFloat(event.price).toFixed(2)}` : "FREE";
-    const favoritedDate = new Date(event.favorited_at).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    const price =
+      event.price > 0 ? `$${parseFloat(event.price).toFixed(2)}` : "FREE";
+    const favoritedDate = new Date(event.favorited_at).toLocaleDateString(
+      "en-US",
+      {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }
+    );
 
     const genreLabels = Array.isArray(event.genres)
       ? event.genres
           .map((genre) =>
-            typeof genre === "string" ? genre : genre && typeof genre.name === "string" ? genre.name : ""
+            typeof genre === "string"
+              ? genre
+              : genre && typeof genre.name === "string"
+              ? genre.name
+              : ""
           )
           .filter(Boolean)
       : [];
-    const genreIcons = Array.isArray(event.genre_icons) ? event.genre_icons : [];
+    const genreIcons = Array.isArray(event.genre_icons)
+      ? event.genre_icons
+      : [];
 
     card.innerHTML = `
-                    <img src="${imageUrl}" alt="${event.title}" class="favorite-image" onerror="this.src='https://via.placeholder.com/400x200?text=Event'">
+                    <img src="${imageUrl}" alt="${
+      event.title
+    }" class="favorite-image" onerror="this.src='https://via.placeholder.com/400x200?text=Event'">
 
                     <div class="favorite-info">
-                        <h3>${event.title}</h3>
+                        <h3>${
+                          event.name || event.title || "Untitled Event"
+                        }</h3>
 
                             <p class="event-details">
                             📍 ${event.location || "Location TBA"}<br>
-                            📅 ${event.date || "Date TBA"} ${event.time ? "• 🕐 " + event.time : ""}<br>
+                            📅 ${event.date || "Date TBA"} ${
+      event.time ? "• 🕐 " + event.time : ""
+    }<br>
                         </p>
 
                         <span class="event-price">${price}</span>
@@ -172,8 +192,12 @@ function renderFavorites() {
                         <p class="favorited-date">❤️ Saved on ${favoritedDate}</p>
 
                         <div class="favorite-actions">
-                            <button class="details-btn" data-event-id="${event.id}">View Details</button>
-                            <button class="remove-btn" data-event-id="${event.id}">Remove</button>
+                            <button class="details-btn" data-event-id="${
+                              event.id
+                            }">View Details</button>
+                            <button class="remove-btn" data-event-id="${
+                              event.id
+                            }">Remove</button>
                         </div>
                     </div>
                 `;
@@ -181,12 +205,20 @@ function renderFavorites() {
     grid.appendChild(card);
   });
 
-  grid.querySelectorAll(".details-btn").forEach((btn) =>
-    btn.addEventListener("click", (e) => viewEvent(e.currentTarget.dataset.eventId))
-  );
-  grid.querySelectorAll(".remove-btn").forEach((btn) =>
-    btn.addEventListener("click", (e) => removeFavorite(parseInt(e.currentTarget.dataset.eventId)))
-  );
+  grid
+    .querySelectorAll(".details-btn")
+    .forEach((btn) =>
+      btn.addEventListener("click", (e) =>
+        viewEvent(e.currentTarget.dataset.eventId)
+      )
+    );
+  grid
+    .querySelectorAll(".remove-btn")
+    .forEach((btn) =>
+      btn.addEventListener("click", (e) =>
+        removeFavorite(parseInt(e.currentTarget.dataset.eventId))
+      )
+    );
 }
 
 async function removeFavorite(eventId) {
@@ -196,16 +228,21 @@ async function removeFavorite(eventId) {
 
   try {
     const firebaseUser = auth.currentUser;
-    const response = await fetch(`/web-proj/api/favorites.php?event_id=${eventId}`, {
-      method: "DELETE",
-      headers: { "X-Firebase-UID": firebaseUser.uid },
-    });
+    const response = await fetch(
+      `/web-proj/api/favorites.php?event_id=${eventId}`,
+      {
+        method: "DELETE",
+        headers: { "X-Firebase-UID": firebaseUser.uid },
+      }
+    );
 
     const data = await response.json();
 
     if (data.success) {
       favorites = favorites.filter((f) => f.id !== eventId);
-      document.getElementById("favorites-subtitle").textContent = `You have ${favorites.length} saved event${favorites.length !== 1 ? "s" : ""}`;
+      document.getElementById("favorites-subtitle").textContent = `You have ${
+        favorites.length
+      } saved event${favorites.length !== 1 ? "s" : ""}`;
       renderFavorites();
     } else {
       alert("Failed to remove favorite: " + (data.error || "Unknown error"));
