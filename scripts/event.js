@@ -77,7 +77,9 @@ function updateUIForLoggedIn() {
 
 async function loadEvent() {
   try {
-    const response = await fetch(`/web-proj/api/events.php?id=${encodeURIComponent(eventId)}`);
+    const response = await fetch(
+      `/web-proj/api/events.php?id=${encodeURIComponent(eventId)}`
+    );
     const data = await response.json();
 
     if (data.success && data.event) {
@@ -99,11 +101,16 @@ function renderEvent() {
   document.getElementById("event-content").style.display = "block";
 
   const imageUrl =
-    event.image_url && typeof event.image_url === "string" && event.image_url.trim()
+    event.image_url &&
+    typeof event.image_url === "string" &&
+    event.image_url.trim()
       ? event.image_url
-      : `https://via.placeholder.com/1200x400?text=Event:${encodeURIComponent(event.id || eventId)}`;
+      : `https://via.placeholder.com/1200x400?text=Event:${encodeURIComponent(
+          event.id || eventId
+        )}`;
   document.getElementById("event-main-image").src = imageUrl;
-  document.getElementById("event-title").textContent = event.title || event.name || "Untitled Event";
+  document.getElementById("event-title").textContent =
+    event.title || event.name || "Untitled Event";
   document.getElementById("event-subtitle").textContent = `${
     event.location || "Location TBA"
   } • ${event.date || "Date TBA"}${event.time ? " • " + event.time : ""}`;
@@ -132,10 +139,12 @@ function renderEvent() {
     genresContainer.appendChild(badge);
   }
 
-  document.getElementById("event-description").textContent = event.description || "No description provided.";
+  document.getElementById("event-description").textContent =
+    event.description || "No description provided.";
   document.getElementById("info-date").textContent = event.date || "TBA";
   document.getElementById("info-time").textContent = event.time || "TBA";
-  document.getElementById("info-location").textContent = event.location || "TBA";
+  document.getElementById("info-location").textContent =
+    event.location || "TBA";
   const price =
     event.price && parseFloat(event.price) > 0
       ? `$${parseFloat(event.price).toFixed(2)}`
@@ -143,7 +152,9 @@ function renderEvent() {
   document.getElementById("info-price").textContent = price;
 
   if (event.creator_name) {
-    const createdAt = event.created_at ? new Date(event.created_at).toLocaleDateString() : "-";
+    const createdAt = event.created_at
+      ? new Date(event.created_at).toLocaleDateString()
+      : "-";
     document.getElementById("creator-info").style.display = "block";
     document.getElementById("creator-name").textContent = event.creator_name;
     document.getElementById("created-date").textContent = createdAt;
@@ -159,7 +170,9 @@ function renderEvent() {
 
   const favoriteBtn = document.getElementById("favorite-btn");
   favoriteBtn.replaceWith(favoriteBtn.cloneNode(true));
-  document.getElementById("favorite-btn").addEventListener("click", toggleFavorite);
+  document
+    .getElementById("favorite-btn")
+    .addEventListener("click", toggleFavorite);
 
   updateRegisterButton();
 
@@ -216,14 +229,17 @@ async function toggleFavorite() {
 
   try {
     const response = await fetch(
-      "/web-proj/api/favorites.php" + (isFavorited ? `?event_id=${encodeURIComponent(eventId)}` : ""),
+      "/web-proj/api/favorites.php" +
+        (isFavorited ? `?event_id=${encodeURIComponent(eventId)}` : ""),
       {
         method: isFavorited ? "DELETE" : "POST",
         headers: {
           "Content-Type": "application/json",
           "X-Firebase-UID": firebaseUser.uid,
         },
-        body: isFavorited ? null : JSON.stringify({ event_id: parseInt(eventId) }),
+        body: isFavorited
+          ? null
+          : JSON.stringify({ event_id: parseInt(eventId) }),
       }
     );
 
@@ -245,9 +261,12 @@ async function refreshRegistrationState() {
   if (!currentUser || !eventId) return;
 
   try {
-    const response = await fetch(`/web-proj/api/registrations.php?event_id=${encodeURIComponent(eventId)}` , {
-      headers: { "X-Firebase-UID": auth.currentUser.uid },
-    });
+    const response = await fetch(
+      `/web-proj/api/registrations.php?event_id=${encodeURIComponent(eventId)}`,
+      {
+        headers: { "X-Firebase-UID": auth.currentUser.uid },
+      }
+    );
 
     const data = await response.json();
     if (!response.ok || !data.success) {
@@ -345,3 +364,196 @@ function showError(message) {
                 </div>
             `;
 }
+
+// ============================================
+// COMMENTS SECTION
+// ============================================
+
+async function loadComments() {
+  const container = document.getElementById("comments-container");
+  if (!container) return; // Exit if comments section doesn't exist yet
+
+  try {
+    const response = await fetch(
+      `/web-proj/api/comments.php? event_id=${eventId}`
+    );
+    const data = await response.json();
+
+    if (data.success) {
+      renderComments(data.comments);
+    } else {
+      throw new Error(data.error);
+    }
+  } catch (error) {
+    console.error("Failed to load comments:", error);
+    container.innerHTML = "<p>Failed to load comments. </p>";
+  }
+}
+
+function renderComments(comments) {
+  const container = document.getElementById("comments-container");
+
+  if (comments.length === 0) {
+    container.innerHTML =
+      '<p style="color: #999;">No comments yet.  Be the first to comment!</p>';
+    return;
+  }
+
+  container.innerHTML = "";
+
+  comments.forEach((comment) => {
+    const card = document.createElement("div");
+    card.className = "comment-card";
+
+    const date = new Date(comment.created_at).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const canDelete =
+      currentUser &&
+      (currentUser.id == comment.user_id ||
+        ["admin", "owner"].includes(currentUser.role));
+
+    card.innerHTML = `
+            <div class="comment-header">
+                <span class="comment-author">${escapeHtml(
+                  comment.user_name
+                )}</span>
+                <span class="comment-date">${date}</span>
+            </div>
+            <p class="comment-text">${escapeHtml(comment.comment)}</p>
+            ${
+              canDelete
+                ? `<button class="comment-delete" onclick="deleteComment(${comment.id})">Delete</button>`
+                : ""
+            }
+        `;
+
+    container.appendChild(card);
+  });
+}
+
+async function submitComment(e) {
+  e.preventDefault();
+
+  const input = document.getElementById("comment-input");
+  const comment = input.value.trim();
+
+  if (!comment) return;
+
+  try {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) {
+      alert("Please log in to comment");
+      return;
+    }
+
+    const response = await fetch("/web-proj/api/comments. php", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Firebase-UID": firebaseUser.uid,
+      },
+      body: JSON.stringify({
+        event_id: eventId,
+        comment: comment,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      input.value = "";
+      document.getElementById("char-count").textContent = "0/1000";
+      loadComments(); // Reload comments
+    } else {
+      alert("Failed to post comment: " + (data.error || "Unknown error"));
+    }
+  } catch (error) {
+    console.error("Failed to post comment:", error);
+    alert("Failed to post comment.  Please try again.");
+  }
+}
+
+window.deleteComment = async function (commentId) {
+  if (!confirm("Delete this comment?")) return;
+
+  try {
+    const firebaseUser = auth.currentUser;
+    const response = await fetch(
+      `/web-proj/api/comments.php? comment_id=${commentId}`,
+      {
+        method: "DELETE",
+        headers: { "X-Firebase-UID": firebaseUser.uid },
+      }
+    );
+
+    const data = await response.json();
+
+    if (data.success) {
+      loadComments(); // Reload comments
+    } else {
+      alert("Failed to delete comment: " + (data.error || "Unknown error"));
+    }
+  } catch (error) {
+    console.error("Failed to delete comment:", error);
+    alert("Failed to delete comment. Please try again.");
+  }
+};
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function showLoginPromptForComments() {
+  const container = document.getElementById("comment-form-container");
+  if (!container) return;
+
+  container.innerHTML = `
+        <div class="login-prompt">
+            <p>Please <a href="/web-proj/login. html">log in</a> to leave a comment. </p>
+        </div>
+    `;
+  container.style.display = "block";
+}
+
+function initializeComments() {
+  // Load comments
+  loadComments();
+
+  // Setup form if user is logged in
+  if (currentUser) {
+    const formContainer = document.getElementById("comment-form-container");
+    if (formContainer) formContainer.style.display = "block";
+
+    const form = document.getElementById("comment-form");
+    if (form) {
+      form.addEventListener("submit", submitComment);
+    }
+
+    // Character counter
+    const input = document.getElementById("comment-input");
+    if (input) {
+      input.addEventListener("input", () => {
+        const count = input.value.length;
+        const counter = document.getElementById("char-count");
+        if (counter) counter.textContent = `${count}/1000`;
+      });
+    }
+  } else {
+    showLoginPromptForComments();
+  }
+}
+
+// Call initializeComments after event loads
+// Add this to the existing loadEvent() function or create a new init
+document.addEventListener("DOMContentLoaded", () => {
+  // Wait a bit for the event to load, then initialize comments
+  setTimeout(initializeComments, 1000);
+});
