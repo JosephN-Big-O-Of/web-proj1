@@ -105,7 +105,7 @@ function renderEvent() {
     typeof event.image_url === "string" &&
     event.image_url.trim()
       ? event.image_url
-      : `https://via.placeholder.com/1200x400?text=Event:${encodeURIComponent(
+      : `https://via.placehold.co/1200x400?text=Event:${encodeURIComponent(
           event.id || eventId
         )}`;
   document.getElementById("event-main-image").src = imageUrl;
@@ -177,6 +177,9 @@ function renderEvent() {
   updateRegisterButton();
 
   document.title = `${event.title || "Event"} | Event Finder`;
+
+  // Initialize comments after event is rendered
+  setTimeout(() => initializeComments(), 500);
 }
 
 function resetButton(id) {
@@ -375,7 +378,7 @@ async function loadComments() {
 
   try {
     const response = await fetch(
-      `/web-proj/api/comments.php? event_id=${eventId}`
+      `/web-proj/api/comments.php?event_id=${eventId}`
     );
     const data = await response.json();
 
@@ -452,7 +455,7 @@ async function submitComment(e) {
       return;
     }
 
-    const response = await fetch("/web-proj/api/comments. php", {
+    const response = await fetch("/web-proj/api/comments.php", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -485,7 +488,7 @@ window.deleteComment = async function (commentId) {
   try {
     const firebaseUser = auth.currentUser;
     const response = await fetch(
-      `/web-proj/api/comments.php? comment_id=${commentId}`,
+      `/web-proj/api/comments.php?comment_id=${commentId}`,
       {
         method: "DELETE",
         headers: { "X-Firebase-UID": firebaseUser.uid },
@@ -550,10 +553,3 @@ function initializeComments() {
     showLoginPromptForComments();
   }
 }
-
-// Call initializeComments after event loads
-// Add this to the existing loadEvent() function or create a new init
-document.addEventListener("DOMContentLoaded", () => {
-  // Wait a bit for the event to load, then initialize comments
-  setTimeout(initializeComments, 1000);
-});
