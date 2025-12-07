@@ -1,4 +1,4 @@
-import { auth } from "/web-proj/firebase-config.js";
+import { auth } from "/web-proj1/firebase-config.js";
 import { onAuthStateChanged as fbOnAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 // Safety: read event id from URL and bail early if missing
@@ -22,8 +22,11 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (firebaseUser) {
       await loadCurrentUser(firebaseUser);
       updateUIForLoggedIn();
+      updateCommentFormVisibility(); // show form
       await checkIfFavorited();
       await refreshRegistrationState();
+    } else {
+      updateCommentFormVisibility(); // hide form
     }
   });
 
@@ -32,7 +35,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
 async function loadCurrentUser(firebaseUser) {
   try {
-    const response = await fetch("/web-proj/api/me.php", {
+    const response = await fetch("/web-proj1/api/me.php", {
       headers: { "X-Firebase-UID": firebaseUser.uid },
     });
     const data = await response.json();
@@ -78,7 +81,7 @@ function updateUIForLoggedIn() {
 async function loadEvent() {
   try {
     const response = await fetch(
-      `/web-proj/api/events.php?id=${encodeURIComponent(eventId)}`
+      `/web-proj1/api/events.php?id=${encodeURIComponent(eventId)}`
     );
     const data = await response.json();
 
@@ -194,7 +197,7 @@ async function checkIfFavorited() {
 
   try {
     const firebaseUser = auth.currentUser;
-    const response = await fetch("/web-proj/api/favorites.php", {
+    const response = await fetch("/web-proj1/api/favorites.php", {
       headers: { "X-Firebase-UID": firebaseUser.uid },
     });
     const data = await response.json();
@@ -224,7 +227,7 @@ function updateFavoriteButton() {
 async function toggleFavorite() {
   if (!currentUser) {
     alert("Please log in to add favorites");
-    window.location.href = "/web-proj/login.html";
+    window.location.href = "/web-proj1/login.html";
     return;
   }
 
@@ -232,7 +235,7 @@ async function toggleFavorite() {
 
   try {
     const response = await fetch(
-      "/web-proj/api/favorites.php" +
+      "/web-proj1/api/favorites.php" +
         (isFavorited ? `?event_id=${encodeURIComponent(eventId)}` : ""),
       {
         method: isFavorited ? "DELETE" : "POST",
@@ -265,7 +268,9 @@ async function refreshRegistrationState() {
 
   try {
     const response = await fetch(
-      `/web-proj/api/registrations.php?event_id=${encodeURIComponent(eventId)}`,
+      `/web-proj1/api/registrations.php?event_id=${encodeURIComponent(
+        eventId
+      )}`,
       {
         headers: { "X-Firebase-UID": auth.currentUser.uid },
       }
@@ -316,7 +321,7 @@ function updateRegisterButton(capacityInfo = null) {
 async function handleRegisterClick() {
   if (!currentUser) {
     alert("Please log in to register for this event.");
-    window.location.href = "/web-proj/login.html";
+    window.location.href = "/web-proj1/login.html";
     return;
   }
 
@@ -326,7 +331,7 @@ async function handleRegisterClick() {
   setRegisterStatus("");
 
   try {
-    const response = await fetch("/web-proj/api/registrations.php", {
+    const response = await fetch("/web-proj1/api/registrations.php", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -363,7 +368,7 @@ function showError(message) {
                 <div class="error-state">
                     <h2>⚠️ Error</h2>
                     <p>${message}</p>
-                    <a href="/web-proj/index.html" class="back-btn">Go Back Home</a>
+                    <a href="/web-proj1/index.html" class="back-btn">Go Back Home</a>
                 </div>
             `;
 }
@@ -373,6 +378,50 @@ function showError(message) {
 // ============================================
 
 // COMMENTS SECTION
+function renderComments(comments) {
+  const container = document.getElementById("comments-container");
+  if (!container) return;
+
+  if (!Array.isArray(comments) || comments.length === 0) {
+    container.innerHTML =
+      '<p style="color:#999;">No comments yet. Be the first to comment!</p>';
+    return;
+  }
+
+  container.innerHTML = "";
+
+  comments.forEach((comment) => {
+    const card = document.createElement("div");
+    card.className = "comment-card";
+
+    const date = comment.created_at
+      ? new Date(comment.created_at).toLocaleString()
+      : "";
+
+    const canDelete =
+      currentUser &&
+      (String(currentUser.id) === String(comment.user_id) ||
+        ["admin", "owner"].includes(currentUser.role));
+
+    card.innerHTML = `
+      <div class="comment-header">
+        <span class="comment-author">${escapeHtml(
+          comment.user_name || "Anonymous"
+        )}</span>
+        <span class="comment-date">${date}</span>
+      </div>
+      <p class="comment-text">${escapeHtml(comment.comment || "")}</p>
+      ${
+        canDelete
+          ? `<button class="comment-delete" onclick="deleteComment(${comment.id})">Delete</button>`
+          : ""
+      }
+    `;
+
+    container.appendChild(card);
+  });
+}
+
 async function loadComments() {
   const container = document.getElementById("comments-container");
   if (!container) return;
@@ -406,20 +455,32 @@ async function submitComment(e) {
       return;
     }
 
+    const idToken = await firebaseUser.getIdToken();
+
     const response = await fetch("api/comments.php", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}`,
         "X-Firebase-UID": firebaseUser.uid,
       },
       body: JSON.stringify({
-        event_id: eventId,
+        event_id: Number(eventId),
         comment,
       }),
     });
 
-    const data = await response.json();
-    if (data.success) {
+    // Optional: robust JSON parsing
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      console.error("Non-JSON response:", text);
+      throw new Error("Server did not return JSON");
+    }
+
+    if (response.ok && data.success) {
       input.value = "";
       document.getElementById("char-count").textContent = "0/1000";
       loadComments();
@@ -437,13 +498,34 @@ window.deleteComment = async function (commentId) {
 
   try {
     const firebaseUser = auth.currentUser;
-    const response = await fetch(`api/comments.php?comment_id=${commentId}`, {
-      method: "DELETE",
-      headers: { "X-Firebase-UID": firebaseUser.uid },
-    });
+    if (!firebaseUser) {
+      alert("Please log in");
+      return;
+    }
 
-    const data = await response.json();
-    if (data.success) {
+    const idToken = await firebaseUser.getIdToken();
+
+    const response = await fetch(
+      `api/comments.php?comment_id=${Number(commentId)}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          "X-Firebase-UID": firebaseUser.uid,
+        },
+      }
+    );
+
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      console.error("Non-JSON response:", text);
+      throw new Error("Server did not return JSON");
+    }
+
+    if (response.ok && data.success) {
       loadComments();
     } else {
       alert("Failed to delete comment: " + (data.error || "Unknown error"));
@@ -480,7 +562,7 @@ function showLoginPromptForComments() {
 
   container.innerHTML = `
         <div class="login-prompt">
-            <p>Please <a href="/web-proj/login. html">log in</a> to leave a comment. </p>
+            <p>Please <a href="/web-proj1/login.html">log in</a> to leave a comment. </p>
         </div>
     `;
   container.style.display = "block";

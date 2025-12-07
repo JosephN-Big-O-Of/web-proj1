@@ -18,7 +18,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
 async function loadCurrentUser(firebaseUser) {
   try {
-    const response = await fetch("/web-proj/api/me.php", {
+    const response = await fetch("/web-proj1/api/me.php", {
       headers: { "X-Firebase-UID": firebaseUser.uid },
     });
     const data = await response.json();
@@ -67,7 +67,7 @@ function showAuthRequired() {
                 <div class="auth-required">
                     <h2>🔒 Login Required</h2>
                     <p>Please log in to view your favorite events.</p>
-                    <a href="/web-proj/login.html" class="login-btn">Go to Login</a>
+                    <a href="/web-proj1/login.html" class="login-btn">Go to Login</a>
                 </div>
             `;
 }
@@ -77,7 +77,7 @@ async function loadFavorites() {
 
   try {
     const firebaseUser = auth.currentUser;
-    const response = await fetch("/web-proj/api/favorites.php", {
+    const response = await fetch("/web-proj1/api/favorites.php", {
       headers: { "X-Firebase-UID": firebaseUser.uid },
     });
     const data = await response.json();
@@ -97,7 +97,7 @@ async function loadFavorites() {
                     <div class="empty-state">
                         <h3>⚠️ Error</h3>
                         <p>Failed to load your favorites. Please try again. </p>
-                       <a href="/web-proj/index.html" class="browse-btn">Go Home</a>
+                       <a href="/web-proj1/index.html" class="browse-btn">Go Home</a>
                     </div>
                 `;
   }
@@ -111,7 +111,7 @@ function renderFavorites() {
                     <div class="empty-state">
                         <h3>💔 No Favorites Yet</h3>
                         <p>You haven't saved any events yet. Start exploring!</p>
-                        <a href="/web-proj/index.html" class="browse-btn">Browse Events</a>
+                        <a href="/web-proj1/index.html" class="browse-btn">Browse Events</a>
                     </div>
                 `;
     return;
@@ -229,7 +229,7 @@ async function removeFavorite(eventId) {
   try {
     const firebaseUser = auth.currentUser;
     const response = await fetch(
-      `/web-proj/api/favorites.php?event_id=${eventId}`,
+      `/web-proj1/api/favorites.php?event_id=${eventId}`,
       {
         method: "DELETE",
         headers: { "X-Firebase-UID": firebaseUser.uid },
@@ -254,5 +254,5 @@ async function removeFavorite(eventId) {
 }
 
 function viewEvent(eventId) {
-  window.location.href = `/web-proj/event.html?id=${eventId}`;
+  window.location.href = `/web-proj1/event.html?id=${eventId}`;
 }

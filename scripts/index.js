@@ -1,4 +1,4 @@
-import { auth } from "/web-proj/firebase-config.js";
+import { auth } from "/web-proj1/firebase-config.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 let allEvents = [];
@@ -27,7 +27,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
 async function loadCurrentUser(firebaseUser) {
   try {
-    const response = await fetch("/web-proj/api/me.php", {
+    const response = await fetch("/web-proj1/api/me.php", {
       headers: { "X-Firebase-UID": firebaseUser.uid },
     });
     const data = await response.json();
@@ -252,7 +252,7 @@ async function loadEvents() {
     }
 
     const response = await fetch(
-      `/web-proj/api/events.php?${params.toString()}`
+      `/web-proj1/api/events.php?${params.toString()}`
     );
     const data = await response.json();
 
@@ -289,7 +289,7 @@ function renderEvents() {
 async function loadFavorites() {
   try {
     const firebaseUser = auth.currentUser;
-    const response = await fetch("/web-proj/api/favorites.php", {
+    const response = await fetch("/web-proj1/api/favorites.php", {
       headers: { "X-Firebase-UID": firebaseUser.uid },
     });
     const data = await response.json();
@@ -316,7 +316,7 @@ window.toggleFavorite = async function (eventId) {
   try {
     const firebaseUser = auth.currentUser;
     const resp = await fetch(
-      "/web-proj/api/favorites.php" + (isFavorited ? `?event_id=${fid}` : ""),
+      "/web-proj1/api/favorites.php" + (isFavorited ? `?event_id=${fid}` : ""),
       {
         method: isFavorited ? "DELETE" : "POST",
         headers: {
@@ -348,7 +348,7 @@ window.toggleFavorite = async function (eventId) {
 
 // View event details
 window.viewEventDetails = function (eventId) {
-  window.location.href = `/web-proj/event.html?id=${eventId}`;
+  window.location.href = `/web-proj1/event.html?id=${eventId}`;
 };
 
 // Geolocation
